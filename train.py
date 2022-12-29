@@ -7,9 +7,9 @@ import logging
 import json
 import torch
 import torch.nn as nn
-from denoising_diffusion_pytorch import Unet, GaussianDiffusion
-from models.convnext.customUNet import Unet_custom
-from models.default_ddpm.dataloader import get_data, get_MNIST
+from models.basemodel import Unet, GaussianDiffusion
+from models.customUNet import Unet_custom
+from models.dataloader import get_data, get_MNIST
 from utils.utils import save_images
 
 
@@ -91,40 +91,34 @@ def build(args):
 
     # load model
     if args.dataset == "MNIST":
-        if args.model == "baseUNet":
-            model = Unet(
-                dim = 64,            
-                channels=1,
-                dim_mults = (1, 2, 4, 8)
-            )
-        elif args.model == "ConvNeXtUNet":
-            model = Unet_custom(
-                dim = 32,
-                channels=1,
-                dim_mults = (1, 2, 4,)
+        n_dim = 32         
+        n_channels=1
+        n_dim_mults = (1, 2, 4, 8)
+        size = 32
+        model = Unet_custom(
+                dim = n_dim,
+                channels=n_channels,
+                dim_mults = n_dim_mults
             )
         diffusion = GaussianDiffusion(
             model,
-            image_size = 32,
+            image_size = size,
             timesteps = 1000,   # number of steps
             loss_type = 'l2'    # L1 or L2
         )
     elif args.dataset == "PolyU HK FKP V1":
-        if args.model == "baseUNet":
-            model = Unet(
-                dim = 64,
-                dim_mults = (1, 2, 4, 8)
+        n_dim = 128         
+        n_channels=3
+        n_dim_mults = (1, 2, 4, 8)
+        size = 128
+        model = Unet_custom(
+                dim = n_dim,
+                channels=n_channels,
+                dim_mults = n_dim_mults
             )
-        elif args.model == "ConvNeXtUNet":
-            model = Unet_custom(
-                dim = 128,
-                channels=3,
-                dim_mults = (1, 2, 4,)
-            )
-
         diffusion = GaussianDiffusion(
             model,
-            image_size = 128,
+            image_size = size,
             timesteps = 1000,   # number of steps
             loss_type = 'l2'    # L1 or L2
         )

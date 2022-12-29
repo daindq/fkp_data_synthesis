@@ -9,6 +9,11 @@ from einops.layers.torch import Rearrange
 import torch
 from torch import nn, einsum
 import torch.nn.functional as F
+'''
+Original implementation: https://github.com/hojonathanho/diffusion
+Source: https://github.com/lucidrains/denoising-diffusion-pytorch
+
+'''
 
 
 def exists(x):
@@ -414,3 +419,5 @@ if __name__ == "__main__":
     channels=3,
     dim_mults=(1, 2, 4, 8)
 )
+    import torchsummary as summary
+    summary(model, (3,128,128))

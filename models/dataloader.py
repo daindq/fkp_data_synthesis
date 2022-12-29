@@ -18,7 +18,6 @@ def get_data(data_path, img_size, batch_size):
 
 
 def get_MNIST(data_path, img_size, batch_size):
-    device = "cuda" if torch.cuda.is_available() else "cpu"
     train_loader = torch.utils.data.DataLoader(
     torchvision.datasets.MNIST(data_path, train=True, download=True,
         transform=torchvision.transforms.Compose([
