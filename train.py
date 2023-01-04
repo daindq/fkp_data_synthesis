@@ -7,6 +7,7 @@ import logging
 import json
 import torch
 import torch.nn as nn
+import shutil
 from models.basemodel import Unet, GaussianDiffusion
 from models.customUNet import Unet_custom
 from models.dataloader import get_data, get_MNIST
@@ -41,16 +42,17 @@ def train_epoch(diffusion, device, train_loader, optimizer, epoch, mgpu):
         optimizer.step()
         loss_accumulator.append(loss.item())
         if batch_idx + 1 < len(train_loader):
-            print(
-                "\rTraining Epoch {}:  [{} batch/{} total batches]\tLoss: {:.6f}\tTime: {:.6f}".format(
-                    epoch,
-                    (batch_idx + 1),
-                    len(train_loader),
-                    loss.item(),
-                    time.time() - t,
-                ),
-                end="",
-            )
+            # print(
+            #     "\rTraining Epoch {}:  [{} batch/{} total batches]\tLoss: {:.6f}\tTime: {:.6f}".format(
+            #         epoch,
+            #         (batch_idx + 1),
+            #         len(train_loader),
+            #         loss.item(),
+            #         time.time() - t,
+            #     ),
+            #     end="",
+            # )
+            None
         else:
             print(
                 "\rTrained Epoch {}:  [{} batch/{} total batches]\tAverage loss: {:.6f}\tTime: {:.6f}".format(
@@ -84,7 +86,7 @@ def build(args):
     if args.dataset == "MNIST":
         dataloader = get_MNIST('data/processed', 32, batch_size)
     elif args.dataset == "PolyU HK FKP V1":
-        dataloader = get_data(args.data_path, 128, batch_size)
+        dataloader = get_data(args.data_path, 64, batch_size, args.hvflip)
         
     # get loss function
 
@@ -107,10 +109,10 @@ def build(args):
             loss_type = 'l2'    # L1 or L2
         )
     elif args.dataset == "PolyU HK FKP V1":
-        n_dim = 128         
+        n_dim = 64         
         n_channels=3
         n_dim_mults = (1, 2, 4, 8)
-        size = 128
+        size = 64
         model = Unet_custom(
                 dim = n_dim,
                 channels=n_channels,
@@ -141,8 +143,8 @@ def build(args):
     diffusion.to(device)
     optimizer_to(optimizer,device)
     # sample image folder
-    if not(os.path.exists(f'{args.param_dir}/sampled_images')):
-        os.makedirs(f'{args.param_dir}/sampled_images')
+    if not(os.path.exists(f'{args.param_dir}/sampled_training_images')):
+        os.makedirs(f'{args.param_dir}/sampled_training_images')
     return (
         device,
         dataloader,
@@ -183,8 +185,8 @@ def train(args):
             scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer, mode="max", factor=0.5, verbose=True
             )
-    
     for epoch in range(starting_epoch, n_epoch + 1):
+        best_loss = 1000
         try:
             loss = train_epoch(
                 diffusion, device, dataloader, optimizer, epoch, mgpu=args.mgpu
@@ -192,7 +194,7 @@ def train(args):
             sampled_images = diffusion.module.sample(batch_size = 4)
             # unnormarlize
             sampled_images = (sampled_images*255).byte()
-            save_images(sampled_images, f'{args.param_dir}/sampled_images/{args.dataset}_{epoch}.jpg')
+            save_images(sampled_images, f'{args.param_dir}/sampled_training_images/{args.dataset}_{epoch}.jpg')
         except KeyboardInterrupt:
             print("Training interrupted by user")
             sys.exit(0)
@@ -209,6 +211,20 @@ def train(args):
             },
             args.param_dir +  '/' + args.dataset  + "_"+ args.model +".pt",
         )
+        if loss < best_loss:
+            torch.save(
+            {
+                "epoch": epoch,
+                "model_state_dict": model.state_dict()
+                if args.mgpu == "false"
+                else model.module.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+                "loss": loss,
+            },
+            args.param_dir +  '/' + args.dataset  + "_"+ args.model + "_bestloss" +".pt",
+            )
+        # Compress sampled images to zip on every epoch.
+        shutil.make_archive(f'{args.param_dir}/sampled_training_images', 'zip', args.param_dir, "sampled_training_images")
 
 
 def get_args():
@@ -216,6 +232,7 @@ def get_args():
     parser.add_argument("-d", "--param_dir", type=str, required=True)
     parser.add_argument("--dataset", type=str, required=True, choices=["MNIST", "PolyU HK FKP V1"])
     parser.add_argument("--data_path", type=str, default='data/processed')
+    parser.add_argument("--hvflip", type=bool, default=False)
     parser.add_argument("--model", type=str, required=True, choices=["baseUNet", "ConvNeXtUNet"])
     parser.add_argument(
         "--multi_gpu", type=str, default="false", dest="mgpu", choices=["true", "false"]

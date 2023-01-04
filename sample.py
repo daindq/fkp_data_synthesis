@@ -4,6 +4,8 @@ import torch.nn as nn
 import math
 from utils.utils import save_all_image
 from denoising_diffusion_pytorch import Unet, GaussianDiffusion
+import shutil
+import os
 
 
 def get_args():
@@ -67,17 +69,24 @@ def main():
     if args.dataset == "MNIST":
       num_ims = 5000
     elif args.dataset == "PolyUHKV1":
-      num_ims = 1000
+      num_ims = 2500
+    if not(os.path.exits(f'{args.dataoutdir}/sample_images')):
+        os.makedirs(f'{args.dataoutdir}/sample_images')
     for i in range(math.ceil(num_ims/args.batch_size)):
         if args.mgpu == "true":
             sampled_images = diffusion.module.sample(batch_size = args.batch_size)
         else: 
             sampled_images = diffusion.sample(batch_size = args.batch_size)
         sampled_images = (sampled_images*255).byte()
-        save_all_image(sampled_images, args.dataoutdir)
+        save_all_image(sampled_images, f'{args.dataoutdir}/sample_images')
+    shutil.make_archive(f'{args.dataoutdir}/sample_images', 'zip', args.dataoutdir, "sample_images")
     
     
     
 if __name__ == "__main__":
-    main()
+    main() 
+    # import shutil
+    # shutil.make_archive(f'models', 'zip', '.', 'models')
+    # shutil.make_archive(filename, 'zip', compress_dir)
+    # # shutil.unpack_archive(filename, extract_dir, archive_format)
     

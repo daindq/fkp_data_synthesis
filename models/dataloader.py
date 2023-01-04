@@ -5,8 +5,20 @@ import torch
 import multiprocessing
 
 
-def get_data(data_path, img_size, batch_size):
+class NoneTransform(object):
+    """ Does nothing to the image, to be used instead of None
+    
+    Args:
+        image in, image out, nothing is done
+    """
+    def __call__(self, image):       
+        return image
+
+
+def get_data(data_path, img_size, batch_size, hvflip:bool = False):
     transforms = torchvision.transforms.Compose([
+        torchvision.transforms.RandomVerticalFlip() if hvflip else NoneTransform, 
+        torchvision.transforms.RandomHorizontalFlip() if hvflip else NoneTransform,
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Resize((img_size, img_size)),  # args.image_size + 1/4 *args.image_size
         
