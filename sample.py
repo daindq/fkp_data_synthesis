@@ -4,6 +4,7 @@ import torch.nn as nn
 import math
 from utils.utils import save_all_image
 from denoising_diffusion_pytorch import Unet, GaussianDiffusion
+from models.customUNet import Unet_custom
 import shutil
 import os
 
@@ -42,7 +43,7 @@ def build_model(args):
             loss_type = 'l2'    # L1 or L2
         )
     elif args.dataset == "PolyUHKV1":
-        model = Unet(
+        model = Unet_custom(
             dim = 64,
             dim_mults = (1, 2, 4, 8)
         )
@@ -70,7 +71,7 @@ def main():
       num_ims = 5000
     elif args.dataset == "PolyUHKV1":
       num_ims = 2500
-    if not(os.path.exits(f'{args.dataoutdir}/sample_images')):
+    if not(os.path.exists(f'{args.dataoutdir}/sample_images')):
         os.makedirs(f'{args.dataoutdir}/sample_images')
     for i in range(math.ceil(num_ims/args.batch_size)):
         if args.mgpu == "true":
@@ -79,7 +80,7 @@ def main():
             sampled_images = diffusion.sample(batch_size = args.batch_size)
         sampled_images = (sampled_images*255).byte()
         save_all_image(sampled_images, f'{args.dataoutdir}/sample_images')
-    shutil.make_archive(f'{args.dataoutdir}/sample_images', 'zip', args.dataoutdir, "sample_images")
+        shutil.make_archive(f'{args.dataoutdir}/sample_images', 'zip', args.dataoutdir, "sample_images")
     
     
     

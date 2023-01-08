@@ -17,8 +17,8 @@ class NoneTransform(object):
 
 def get_data(data_path, img_size, batch_size, hvflip:bool = False):
     transforms = torchvision.transforms.Compose([
-        torchvision.transforms.RandomVerticalFlip() if hvflip else NoneTransform, 
-        torchvision.transforms.RandomHorizontalFlip() if hvflip else NoneTransform,
+        torchvision.transforms.RandomVerticalFlip() if hvflip else NoneTransform(), 
+        torchvision.transforms.RandomHorizontalFlip() if hvflip else NoneTransform(),
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Resize((img_size, img_size)),  # args.image_size + 1/4 *args.image_size
         

@@ -193,6 +193,7 @@ def build_PolyUHKV1(args, dirs):
         for item in os.listdir(f'{data_raw_dir}/{square_dir}'):
             img = Image.open(f'{data_raw_dir}/{square_dir}/{item}')
             filename = item.split('.')[0]
+            img = img.resize((64,64))
             img.save(f'{data_raw_dir}/{dirformatted}/{filename}.jpg')            
     else:
         dirformatted = square_dir
