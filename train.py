@@ -96,7 +96,7 @@ def build(args):
     n_channels=3 # num Image channel
     n_dim_mults = (1, 2, 4, 8)
     size = 64 # 
-    model = Unet(
+    model = Unet_custom(
             dim = n_dim,
             channels=n_channels,
             dim_mults = n_dim_mults
@@ -183,10 +183,11 @@ def train(args):
             )
             print("Sampling...")
             ema.ema_model.eval()
-            sampled_images = ema.ema_model.sample(batch_size = 4)
-            # unnormarlize
-            sampled_images = (sampled_images*255).byte()
-            save_images(sampled_images, f'{args.param_dir}/sampled_training_images/FKP_{epoch}.jpg')
+            with torch.no_grad():
+                sampled_images = ema.ema_model.sample(batch_size = 4)
+                # unnormarlize
+                sampled_images = (sampled_images*255).byte()
+                save_images(sampled_images, f'{args.param_dir}/sampled_training_images/FKP_{epoch}.jpg')
         except KeyboardInterrupt:
             print("Training interrupted by user")
             sys.exit(0)
