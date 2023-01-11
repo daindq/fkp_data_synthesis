@@ -9,9 +9,10 @@ from einops.layers.torch import Rearrange
 import torch
 from torch import nn, einsum
 import torch.nn.functional as F
+
 '''
-Original implementation: https://github.com/hojonathanho/diffusion
-Source: https://github.com/lucidrains/denoising-diffusion-pytorch
+Original implementation in TF: https://github.com/hojonathanho/diffusion
+pytorch implementation Source: https://github.com/lucidrains/denoising-diffusion-pytorch
 
 '''
 
