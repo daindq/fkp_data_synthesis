@@ -32,10 +32,16 @@ def save_all_image(images, dir, **kwargs):
         im.save(f'{dir}/{id.hex}.jpg')        
     
     
+def total_variation_loss(img, weight):
+     bs_img, c_img, h_img, w_img = img.size()
+     tv_h = torch.pow(img[:,:,1:,:]-img[:,:,:-1,:], 2).sum()
+     tv_w = torch.pow(img[:,:,:,1:]-img[:,:,:,:-1], 2).sum()
+     return weight*(tv_h+tv_w)/(bs_img*c_img*h_img*w_img)
+
+
 def mk_folders(run_name):
     os.makedirs("models", exist_ok=True)
     os.makedirs("results", exist_ok=True)
     os.makedirs(os.path.join("models", run_name), exist_ok=True)
     os.makedirs(os.path.join("results", run_name), exist_ok=True)
-    
-    
+   

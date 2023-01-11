@@ -1,6 +1,6 @@
 
 import math
-from inspect import isfunction
+
 from functools import partial
 import matplotlib.pyplot as plt
 from tqdm.auto import tqdm
