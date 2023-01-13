@@ -1,3 +1,4 @@
+#@title
 '''
 Source: https://github.com/facebookresearch/DiT
 '''
