@@ -1,7 +1,3 @@
-#@title
-'''
-Source: https://github.com/facebookresearch/DiT
-'''
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 
@@ -130,10 +126,10 @@ class FinalLayer(nn.Module):
     """
     The final layer of DiT.
     """
-    def __init__(self, hidden_size, patch_size, out_dim):
+    def __init__(self, hidden_size, patch_size, out_channels):
         super().__init__()
         self.norm_final = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
-        self.linear = nn.Linear(hidden_size, patch_size * patch_size * out_dim, bias=True)
+        self.linear = nn.Linear(hidden_size, patch_size * patch_size * out_channels, bias=True)
         self.adaLN_modulation = nn.Sequential(
             nn.SiLU(),
             nn.Linear(hidden_size, 2 * hidden_size, bias=True)
@@ -154,7 +150,7 @@ class DiT(nn.Module):
         self,
         input_size=32,
         patch_size=2,
-        channels=4,
+        in_channels=4,
         hidden_size=1152,
         depth=28,
         num_heads=16,
@@ -162,17 +158,22 @@ class DiT(nn.Module):
         class_dropout_prob=0.1,
         num_classes=1000,
         learn_sigma=False,
-        self_condition = False,
+        self_condition=False
     ):
         super().__init__()
-        self.self_condition = self_condition
         self.learn_sigma = learn_sigma
-        self.channels = channels
-        self.out_dim = channels * 2 if learn_sigma else channels
+
+        self.in_channels = in_channels
+        self.channels = in_channels
+
+        self.out_channels = in_channels * 2 if learn_sigma else in_channels
+        self.out_dim = self.channels * 2 if learn_sigma else self.channels
+        self.random_or_learned_sinusoidal_cond = False
+        self.self_condition = self_condition
         self.patch_size = patch_size
         self.num_heads = num_heads
-        self.random_or_learned_sinusoidal_cond = False
-        self.x_embedder = PatchEmbed(input_size, patch_size, channels, hidden_size, bias=True)
+
+        self.x_embedder = PatchEmbed(input_size, patch_size, in_channels, hidden_size, bias=True)
         self.t_embedder = TimestepEmbedder(hidden_size)
         self.y_embedder = LabelEmbedder(num_classes, hidden_size, class_dropout_prob)
         num_patches = self.x_embedder.num_patches
@@ -182,7 +183,7 @@ class DiT(nn.Module):
         self.blocks = nn.ModuleList([
             DiTBlock(hidden_size, num_heads, mlp_ratio=mlp_ratio) for _ in range(depth)
         ])
-        self.final_layer = FinalLayer(hidden_size, patch_size, self.out_dim)
+        self.final_layer = FinalLayer(hidden_size, patch_size, self.out_channels)
         self.initialize_weights()
 
     def initialize_weights(self):
@@ -225,7 +226,7 @@ class DiT(nn.Module):
         x: (N, T, patch_size**2 * C)
         imgs: (N, H, W, C)
         """
-        c = self.out_dim
+        c = self.out_channels
         p = self.x_embedder.patch_size[0]
         h = w = int(x.shape[1] ** 0.5)
         assert h * w == x.shape[1]
@@ -236,24 +237,24 @@ class DiT(nn.Module):
         return imgs
 
     def forward(self, x, t, y=None):
-        """
-        Forward pass of DiT.
-        x: (N, C, H, W) tensor of spatial inputs (images or latent representations of images)
-        t: (N,) tensor of diffusion timesteps
-        y: (N,) tensor of class labels
-        """
-        x = self.x_embedder(x) + self.pos_embed  # (N, T, D), where T = H * W / patch_size ** 2
-        t = self.t_embedder(t)                   # (N, D)
-        if y != None:
-            y = self.y_embedder(y, self.training)    # (N, D)
-            c = t + y                                # (N, D)
-        else:
-            c = t
-        for block in self.blocks:
-            x = block(x, c)                      # (N, T, D)
-        x = self.final_layer(x, c)               # (N, T, patch_size ** 2 * out_dim)
-        x = self.unpatchify(x)                   # (N, out_dim, H, W)
-        return x
+          """
+          Forward pass of DiT.
+          x: (N, C, H, W) tensor of spatial inputs (images or latent representations of images)
+          t: (N,) tensor of diffusion timesteps
+          y: (N,) tensor of class labels
+          """
+          x = self.x_embedder(x) + self.pos_embed  # (N, T, D), where T = H * W / patch_size ** 2
+          t = self.t_embedder(t)                   # (N, D)
+          if y != None:
+              y = self.y_embedder(y, self.training)    # (N, D)
+              c = t + y                                # (N, D)
+          else:
+              c = t
+          for block in self.blocks:
+              x = block(x, c)                      # (N, T, D)
+          x = self.final_layer(x, c)               # (N, T, patch_size ** 2 * out_dim)
+          x = self.unpatchify(x)                   # (N, out_dim, H, W)
+          return x
 
     def forward_with_cfg(self, x, t, y, cfg_scale):
         """
